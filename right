@@ -1,0 +1,480 @@
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*    Module:       main.cpp                                                  */
+/*    Author:       Student                                                   */
+/*    Created:      11/16/2025, 2:05:40 PM                                    */
+/*    Description:  V5 project                                                */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/
+
+#include "vex.h"
+
+using namespace vex;
+
+// A global instance of competition
+competition Competition;
+
+// define your global instances of motors and other devices here
+vex::brain       Brain;
+motor leftfrontmotor = motor(PORT4, ratio18_1, true);
+motor leftbackmotor = motor(PORT11, ratio18_1, true);
+motor leftmidmotor = motor(PORT3, ratio18_1, true);
+motor rightfrontmotor = motor(PORT8, ratio18_1, false);
+motor rightbackmotor = motor(PORT20, ratio18_1, false);
+motor rightmidmotor = motor(PORT6, ratio18_1, false);
+motor frontrollers = motor(PORT21, ratio18_1, false);
+motor backrollers = motor(PORT19, ratio18_1, false);
+digital_out pneum = digital_out(Brain.ThreeWirePort.A);
+digital_out toungue = digital_out(Brain.ThreeWirePort.B);
+inertial inert = inertial(PORT15);
+controller control = controller();
+bool platform = false;
+bool toungueOut = false;
+bool backRollersRun = false;
+bool frontRollersRun = false;
+
+
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the V5 has been powered on and        */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
+
+void pre_auton(void) {
+    inert.calibrate();
+    wait(3, seconds);
+  // All activities that occur before the competition starts
+  // Example: clearing encoders, setting servo positions, ...
+}
+
+void turnRight(int units){
+    inert.resetRotation();
+    float lasterror = -units;
+    float placeholder = 0;
+    while(true){
+        float error = -units + inert.rotation(degrees);
+        float derivative = error - lasterror;
+        float power = error*0.3 + derivative*0.3;
+        if(error < 0){
+            placeholder = error*-1;
+        }
+        else{
+            placeholder = error;
+        }
+        if (placeholder < 3){
+            break;
+        }
+        leftfrontmotor.spin(reverse, power, pct);
+        leftmidmotor.spin(reverse,power,pct);
+        leftbackmotor.spin(reverse, power, pct);
+        rightfrontmotor.spin(forward, power, pct);
+        rightmidmotor.spin(forward,power,pct);
+        rightbackmotor.spin(forward, power, pct);
+        lasterror = error;
+        wait(10, msec);
+    }
+    leftfrontmotor.stop();
+    leftmidmotor.stop();
+    leftbackmotor.stop();
+    rightfrontmotor.stop();
+    rightmidmotor.stop();
+    rightbackmotor.stop();
+}
+
+void turnLeft(int units){
+    inert.resetRotation();
+    units+=4;
+    float lasterror = -units;
+    float var = 0;
+    while(true){
+        float error = -units - inert.rotation(degrees);
+        float derivative = error - lasterror;
+        float power = error*0.3 + derivative*0.5;
+        if(error < 0){
+            var = error*-1;
+        }
+        else{
+            var = error;
+        }
+        if (var < 4){
+            break;
+        }
+        leftfrontmotor.spin(forward, power, pct);
+        leftmidmotor.spin(forward, power, pct);
+        leftbackmotor.spin(forward, power, pct);
+        rightfrontmotor.spin(reverse, power, pct);
+        rightmidmotor.spin(reverse, power, pct);
+        rightbackmotor.spin(reverse, power, pct);
+        lasterror = error;
+        wait(10, msec);
+    }
+    leftfrontmotor.stop();
+    leftmidmotor.stop();
+    leftbackmotor.stop();
+    rightfrontmotor.stop();
+    rightmidmotor.stop();
+    rightbackmotor.stop();
+}
+
+
+int driveForward(int units){
+    Brain.Screen.setCursor(1,1);
+    Brain.Screen.clearScreen();
+    float lasterror = units;
+    float var = 0;
+    while(true){
+        float error = units - leftfrontmotor.position(degrees);
+        float derivative = error - lasterror;
+        float power = error*0.16 + derivative*0.13;
+        if(error < 0){
+            var = error*-1;
+        }
+        else{
+            var = error;
+        }
+        if (var < 10){
+            break;
+        }
+        leftfrontmotor.spin(forward, power, pct);
+        leftmidmotor.spin(forward, power, pct);
+        leftbackmotor.spin(forward, power, pct);
+        rightfrontmotor.spin(forward, power, pct);
+        rightmidmotor.spin(forward, power, pct);
+        rightbackmotor.spin(forward, power, pct);
+        lasterror = error;
+        wait(10, msec);
+    }
+    leftbackmotor.stop();
+    leftfrontmotor.stop();
+    leftmidmotor.stop();
+    rightfrontmotor.stop();
+    rightfrontmotor.stop();
+    rightmidmotor.stop();
+    return  0;
+}
+
+
+void stopAll(){
+    leftbackmotor.stop();
+    leftfrontmotor.stop();
+    leftmidmotor.stop();
+    rightfrontmotor.stop();
+    rightfrontmotor.stop();
+    rightmidmotor.stop();
+
+    leftbackmotor.resetPosition();
+    leftfrontmotor.resetPosition();
+    leftmidmotor.resetPosition();
+    rightbackmotor.resetPosition();
+    rightfrontmotor.resetPosition();
+    rightmidmotor.resetPosition();
+
+        
+}
+
+
+void driveReverse(int units){
+    leftfrontmotor.resetPosition();
+    float lasterror = units;
+    float var = 0;
+    while(true){
+        float error = units + leftfrontmotor.position(degrees);
+        float derivative = error - lasterror;
+        float power = error*0.1 + derivative*0.9;
+        if(error < 0){
+            var = error*-1;
+        }
+        else{
+            var = error;
+        }
+        if (var < 10){
+            break;
+        }
+        leftfrontmotor.spin(reverse, power, pct);
+        leftmidmotor.spin(reverse, power, pct);
+        leftbackmotor.spin(reverse, power, pct);
+        rightfrontmotor.spin(reverse, power, pct);
+        rightmidmotor.spin(reverse, power, pct);
+        rightbackmotor.spin(reverse, power, pct);
+        lasterror = error;
+        wait(10, msec);
+    }
+    leftbackmotor.stop();
+    leftfrontmotor.stop();
+    leftmidmotor.stop();
+    rightfrontmotor.stop();
+    rightfrontmotor.stop();
+    rightmidmotor.stop();
+    // turnLeft(1);
+}
+
+void badturnLeft(int units){
+    leftmidmotor.spin(reverse, 100, percent);
+    leftmidmotor.spin(reverse, 100, percent);
+    leftmidmotor.spin(reverse, 100, percent);
+    wait(units, seconds);
+}
+
+int brainDisplay(void){
+    while(true){
+        Brain.Screen.clearScreen();
+        Brain.Screen.setCursor(1,1); //row-column yx
+        Brain.Screen.print("Inertial Reading: %f", inert.rotation(degrees));
+        wait(10,msec);
+    }
+    return(0);
+}
+
+int frontStop() {
+    wait(1, seconds);
+    frontrollers.stop();
+    return 0;
+}
+
+int backStop() {
+    wait(1, seconds);
+    backrollers.stop();
+    return 0;
+}
+
+void calibrate(){
+    inert.calibrate();
+    wait(3, seconds);
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+void autonomous(void) {
+  thread thrd(brainDisplay);
+    calibrate();
+    // auton.left
+    // toungue.set(true);
+    // driveReverse(510);
+    // turnRight(93);
+    // stopAll();
+    // wait(0.5,seconds);
+    // driveReverse(410);
+    // frontrollers.spin(forward,100,percent);
+    // backrollers.spin(reverse,100,percent);
+
+    //  // auton.right
+    toungue.set(true);
+    driveReverse(510);
+    turnLeft(93);
+    stopAll();
+    wait(0.5,seconds);
+    driveReverse(410);
+    frontrollers.spin(forward,100,percent);
+    backrollers.spin(reverse,100,percent);
+
+
+    // // //auton.left.AWP.code
+    // toungue.set(true);
+    // frontrollers.spin(forward, 100, pct);
+    // driveReverse(410);
+    // toungue.set(false);
+    // turnRight(93);
+    // stopAll();
+    // driveReverse(10);
+    // stopAll();
+    // //everything above here works
+    // toungue.set(false);
+    // frontrollers.spin(forward,100,percent);
+    //     wait(0.25,seconds);
+    
+    //  //ram into things a lot
+    // driveForward(145);
+    // wait(2,seconds);
+    
+    // //align with goal
+    // driveReverse(200);
+    // turnLeft(25);
+    // driveReverse(185);
+    // turnRight(35);
+    // driveReverse(200);
+    // frontrollers.spin(reverse,100,percent);
+    // wait(0.25,seconds);
+    // frontrollers.spin(forward,100,percent);
+    // backrollers.spin(reverse,100,percent);
+    // wait(2,seconds);
+
+    // //come back to loader   
+    // backrollers.stop();
+    // driveForward(200);
+    // turnLeft(17);
+    // driveForward(350);
+
+    // wait(2,seconds);
+    // driveReverse(150);
+    // turnRight(29);
+    // driveReverse(300);
+    // backrollers.spin(reverse,100,percent);
+    // wait(2,seconds);
+    // backrollers.stop();
+    // driveForward(200);
+    // turnLeft(120);
+    // driveForward(100);
+    // turnRight(180);
+    // driveReverse(200);
+    // backrollers.spin(reverse,100,percent);
+
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              User Control Task                            */
+/*                                                                           */
+/*  This task is used to control your robot during the user control phase of */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+void move() {
+    while (true) {
+        int forward_power = 0;
+        int turn_power = 0;
+        if (control.Axis3.position() > 10 || control.Axis3.position() < -10) {
+            forward_power = control.Axis3.position();
+        }
+
+        if (control.Axis1.position() > 10 || control.Axis1.position() < -10) {
+            turn_power = control.Axis1.position();
+        }
+
+        leftfrontmotor.spin(forward, forward_power + turn_power, pct);
+        leftbackmotor.spin(forward, forward_power + turn_power, pct);
+        leftmidmotor.spin(forward, forward_power + turn_power, pct);
+        rightfrontmotor.spin(forward, forward_power - turn_power, pct);
+        rightbackmotor.spin(forward, forward_power - turn_power, pct);
+        rightmidmotor.spin(forward, forward_power - turn_power, pct);
+        wait(20, msec);
+    }
+}
+
+void length() {
+    if (!platform) {
+        pneum.set(true);
+    } else {
+        pneum.set(false);
+    }
+    platform = !platform;
+}
+
+
+void toungee() {
+    if (!toungueOut) {
+        toungue.set(true);
+    } else {
+        toungue.set(false);
+    }
+    toungueOut = !toungueOut;
+}
+
+void runFrontRollers() {
+    if (!frontRollersRun) {
+        frontrollers.spin(forward, 100, percent);
+    } else {
+        frontrollers.stop();
+    }
+    frontRollersRun = !frontRollersRun;
+}
+
+void reverseFrontRollers() {
+    if (!frontRollersRun) {
+        frontrollers.spin(reverse, 100, percent);
+    } else {
+        frontrollers.stop();
+    }
+    frontRollersRun = !frontRollersRun;
+}
+
+void runBackRollers() {
+    if (!backRollersRun) {
+        backrollers.spin(forward, 100, percent);
+    } else {
+        backrollers.stop();
+    }
+    backRollersRun = !backRollersRun;
+}
+
+void reverseBackRollers() {
+    if (!backRollersRun) {
+        backrollers.spin(reverse, 100, percent);
+    } else {
+        backrollers.stop();
+    }
+    backRollersRun = !backRollersRun;
+}
+
+void front() {
+    while (true) {
+        if (control.ButtonR1.pressing()) {
+            frontrollers.spin(forward, 100, percent);
+        }
+        else if (control.ButtonR2.pressing()) {
+            frontrollers.stop();
+        }
+        wait(0.05, seconds);
+    }
+}
+
+// Back button control
+void back() {
+    while (true) {
+        if (control.ButtonL1.pressing()) {
+            backrollers.spin(forward, 100, percent);
+        }
+        else if (control.ButtonL2.pressing()) {
+            backrollers.stop();
+        }
+        wait(0.05, seconds);
+    }
+}
+
+
+void usercontrol(void) {
+    // Create threads once at the beginning
+    thread thrd(move);
+    thread thrdd(front);
+    thread thrd2(back);
+
+    // Set button functions
+    control.ButtonA.released(length);
+    control.ButtonY.released(toungee);
+    control.ButtonR1.released(runFrontRollers);
+    control.ButtonR2.released(reverseFrontRollers);
+    control.ButtonL1.released(reverseBackRollers);
+    control.ButtonL2.released(runBackRollers);
+    wait(20, msec);
+}
+
+
+//
+// Main will set up the competition functions and callbacks.
+//
+int main() {
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+  // Run the pre-autonomous function.
+  pre_auton();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
